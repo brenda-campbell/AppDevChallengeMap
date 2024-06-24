@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Azure AppDev Challenge</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+    <meta name="description" content="" />
+    <meta name="keywords" content="" />
+    <meta name="author" content="" />
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+          crossorigin="" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+            integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+            crossorigin=""></script>
+    <style rel="stylesheet" type="text/css">
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 13px;
+        }
+    </style>
+
+    <!-- temp dummy data  -->
+    <script type="text/javascript" id="pindata" src="pindata.js"></script>  
+
+    <script type='text/javascript'>
+        var vMap;
+        var vMapPins = new Array(100);
+
+        // https://github.com/pointhi/leaflet-color-markers
+        var greenIcon = new L.Icon({
+            iconUrl: 'https://cdn.rawgit.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
+            iconSize: [25, 41],
+            iconAnchor: [12, 41],
+            popupAnchor: [1, -34]
+            });
+
+        var redIcon = new L.Icon({
+            iconUrl: 'https://cdn.rawgit.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+            iconSize: [25, 41],
+            iconAnchor: [12, 41],
+            popupAnchor: [1, -34]
+            });
+
+        var amberIcon = new L.Icon({
+            iconUrl: 'https://cdn.rawgit.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-orange.png',
+            iconSize: [25, 41],
+            iconAnchor: [12, 41],
+            popupAnchor: [1, -34]
+            });
+
+        function DisplayPin(vDeviceid,vName,vLongitude,vLatitude,vText,vStatus,vImage){
+
+           //var vIcon = (vStatus === "red") ? redIcon : (vStatus === "amber")  ? amberIcon : greenIcon;
+           var vIcon = (Math.random() > 0.5) ? redIcon : greenIcon;
+            // Define circle options
+            var circleOptions = {
+                color: 'blue',      // Circle border color
+                fillColor: '#f03',  // Circle fill color
+                fillOpacity: 0.5,   // Circle fill opacity
+                radius: 100         // Circle radius in meters
+            };
+
+            if (typeof vMapPins[vDeviceid] === "undefined") {
+                // Create a marker and add it to the map
+                var marker = L.marker([vLatitude, vLongitude], {icon: vIcon}).bindPopup(vName).addTo(vMap);
+                // Create a circle and add it to the map
+                var circle = L.circle([vLatitude, vLongitude], circleOptions).addTo(vMap);
+                // Store both marker and circle in the vMapPins object
+                vMapPins[vDeviceid] = { marker: marker, circle: circle };            
+            } else {    
+                // Update the marker's icon
+                vMapPins[vDeviceid].marker.setIcon(vIcon);
+                // Update the circle's position
+                vMapPins[vDeviceid].circle.setLatLng([vLatitude, vLongitude]);
+            }
+            
+        }
+ 
+        function UpdateMap(vPinData) {
+
+            var vAlarmsHTML = "";
+            for (i = 0; i < vPinData.length; i++) { 
+                var vPin = vPinData[i];
+                DisplayPin(vPin.deviceid,vPin.name,vPin.longitude,vPin.latitude,vPin.text,vPin.status,vPin.image);
+                vAlarmsHTML = vAlarmsHTML + vPin.deviceid + ": " + vPin.name + "<br />";
+            } 
+
+            var x = new Date()
+            document.getElementById('idTime').innerHTML = x.toUTCString();
+            document.getElementById('idAlarms').innerHTML = vAlarmsHTML;
+        }
+
+        function GetMapData() {
+
+            // poll every 30 seconds 
+            window.setTimeout(GetMapData, 30000);
+
+            // var xhttp = new XMLHttpRequest();
+            // xhttp.onreadystatechange = function() {
+            //     if (this.readyState == 4 && this.status == 200) {
+            //         UpdateMap(this.responseText);
+            //     }
+            // };
+            // xhttp.open("GET", "api/getmapdata", true);
+            // xhttp.send();
+
+            UpdateMap(vDummyData);   
+
+        }
+
+        function GetMap() {
+
+            var sKey = '6Io4wqjHYuovGkFygk55t8kyMzjdyn0RoSYZjQHCEcadaPSR2O8IJQQJ99AFAC5RqLJER6OWAAAgAZMPBrOi';
+
+            vMap = L.map('myMap').setView([51.505, -1],7.5);
+
+            L.tileLayer('https://atlas.microsoft.com/map/tile/png?api-version=1&layer=basic&style=main&tileSize=512&zoom={z}&x={x}&y={y}&subscription-key={subscriptionKey}', {
+                attribution: '© ' + new Date().getFullYear() + ' Microsoft, © 1992 - ' + new Date().getFullYear() + ' TomTom',
+                maxZoom: 18,
+                tileSize: 512,
+                zoomOffset: -1,
+                id: 'azuremaps.road',
+                crossOrigin: true,
+                subscriptionKey: sKey
+            }).addTo(vMap);
+
+            // Add click event listener to the map
+            vMap.on('click', function(e) {
+                // You can generate a unique ID for the new pin or use a placeholder
+                var newDeviceId = 'newPin_' + Date.now();
+                // Use a default name for the pin, or customize as needed
+                var pinName = 'New Pin';
+                // Call DisplayPin with the clicked location's latitude and longitude
+                DisplayPin(newDeviceId, pinName, e.latlng.lng, e.latlng.lat, '', '', '');
+            });
+
+            GetMapData();
+        }
+
+    </script>
+
+</head>
+
+<body onload="GetMap()">
+    <div id="myMap" style="position:relative;width:100%;min-width:350px;height:700px;"></div>
+    <fieldset style="width:calc(100% - 30px);min-width:350px;margin-top:10px;">
+        <legend>Alarm Info&nbsp;-&nbsp;<span id='idTime' ></span></legend>
+        <span id='idAlarms' ></span>
+     </fieldset>
+</body>
+
+</html>
