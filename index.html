@@ -22,7 +22,19 @@
     </style>
 
     <!-- temp dummy data  -->
-    <script type="text/javascript" id="pindata" src="pindata.js"></script>  
+    <script type="text/javascript">
+        // Define a global object to hold fetched data with identifiers
+        window.myFetchedData = {};
+
+        fetch('https://azureapimaps-test.azurewebsites.net/GetMap')
+        .then(response => response.json())
+        .then(data => {
+            // Store the data with an ID
+            window.myFetchedData['pindata'] = data;
+            console.log(window.myFetchedData['pindata']); // Access the data using the ID
+        })
+        .catch(error => console.error('Error fetching data:', error));
+    </script>
 
     <script type='text/javascript'>
         var vMap;
@@ -78,16 +90,23 @@
             
         }
  
-        function UpdateMap(vPinData) {
-
+        function UpdateMap(responseText) {
+            var vPinData = JSON.parse(responseText);
             var vAlarmsHTML = "";
-            for (i = 0; i < vPinData.length; i++) { 
-                var vPin = vPinData[i];
-                DisplayPin(vPin.deviceid,vPin.name,vPin.longitude,vPin.latitude,vPin.text,vPin.status,vPin.image);
-                vAlarmsHTML = vAlarmsHTML + vPin.deviceid + ": " + vPin.name + "<br />";
-            } 
 
-            var x = new Date()
+            for (var i = 0; i < vPinData.length; i++) {
+                var vPin = vPinData[i];
+
+                // Validate longitude and latitude
+                if (typeof vPin.longitude !== 'undefined' && typeof vPin.latitude !== 'undefined') {
+                    DisplayPin(vPin.deviceid, vPin.name, vPin.longitude, vPin.latitude, vPin.text, vPin.status, vPin.image);
+                    vAlarmsHTML += vPin.deviceid + ": " + vPin.name + "<br />";
+                } else {
+                    console.error('Invalid or missing coordinates for pin:', vPin);
+                }
+            }
+
+            var x = new Date();
             document.getElementById('idTime').innerHTML = x.toUTCString();
             document.getElementById('idAlarms').innerHTML = vAlarmsHTML;
         }
@@ -97,16 +116,16 @@
             // poll every 30 seconds 
             window.setTimeout(GetMapData, 30000);
 
-            // var xhttp = new XMLHttpRequest();
-            // xhttp.onreadystatechange = function() {
-            //     if (this.readyState == 4 && this.status == 200) {
-            //         UpdateMap(this.responseText);
-            //     }
-            // };
-            // xhttp.open("GET", "api/getmapdata", true);
-            // xhttp.send();
+            var xhttp = new XMLHttpRequest();
+            xhttp.onreadystatechange = function() {
+                if (this.readyState == 4 && this.status == 200) {
+                     UpdateMap(this.responseText);
+                 }
+            };
+            xhttp.open("GET", "https://azureapimaps-test.azurewebsites.net/GetMap", true);
+            xhttp.send();
 
-            UpdateMap(vDummyData);   
+            //UpdateMap(vDummyData);   
 
         }
 
